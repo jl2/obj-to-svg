@@ -1,0 +1,20 @@
+* obj-to-svg
+
+** About
+Render Wavefront OBJ files as SVG images.
+
+#+begin_src lisp
+  (ql:quickload :obj-to-svg)
+  (handler-bind ((file-exists (lambda (c)
+                                (invoke-restart 'supersede))))
+    (obj-to-svg:obj-to-svg #p"~/data/3d-models/sphere.obj" #p"~/data/3d-models/sphere.svg"))
+  (swank:eval-in-emacs '(find-file "~/data/3d-models/sphere.svg"))
+#+end_src
+
+#+RESULTS:
+: #<SWANK:UNREADABLE-RESULT #<buffer sphere.svg>>
+
+** License
+ISC
+
+Copyright (c) 2025 Jeremiah LaRocco <jeremiah_larocco@fastmail.com>
