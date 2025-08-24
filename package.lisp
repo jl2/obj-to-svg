@@ -16,6 +16,10 @@
 
   (:nicknames :ots)
 
-  (:use #:cl #:alexandria #:3d-vectors #:3d-matrices)
+  (:use #:cl
+        #:alexandria
+        #:3d-vectors
+        #:3d-matrices
+        #:obj-reader)
   (:export #:main
            #:obj-to-svg))
