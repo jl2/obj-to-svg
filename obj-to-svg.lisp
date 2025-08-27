@@ -30,6 +30,7 @@
                                                   (obj-file (path obj-file))
                                                   (t #P"~/images/object.obj"))
                                                 ))
+                     (tri-limit nil)
                      (eye-position (vec3 0 0 100))
                      (look-at (vec3 0 0 0))
                      (up-vector (vec3 0 1 0))
@@ -70,13 +71,20 @@ filed-of-view is ignored if perspective is nil.
                     (mlookat eye-position look-at up-vector)))
           (tris-and-lines (collect-geometry obj-file)))
       (sort-geometry tris-and-lines eye-position)
+      (when tri-limit
+        (setf tris-and-lines (if (> tri-limit (length tris-and-lines))
+                                 tris-and-lines
+                                 (subseq tris-and-lines
+                                         (- (length tris-and-lines) tri-limit)))))
       (labels ((shade-geometry (geo)
                  (declare (type obj-reader:geometry geo))
                  (cond (shade
                         (let ((color (vec3 0 0 0))
                               (kd (vxyz (obj-reader:get-attribute (material geo) "Kd")))
-                              ;;(ks (vxyz (obj-reader:get-attribute (material geo) "Ks")))
-                              ;;(ns (obj-reader:get-attribute (material geo) "Ns"))
+                              (ks (vxyz (obj-reader:get-attribute (material geo) "Ks")))
+                              (ns (if-let (ns (obj-reader:get-attribute (material geo) "Ns"))
+                                    ns
+                                    1.0))
                               (alpha (typecase (obj-reader:get-attribute (material geo) "Kd")
                                        (vec4 (vw (obj-reader:get-attribute (material geo) "Kd")))
                                        (t svg:*default-alpha*))))
@@ -84,20 +92,20 @@ filed-of-view is ignored if perspective is nil.
                           (loop
                             :with first-vert = (aref (vertices geo) 0)
                             :with norm = (aref (vertices geo) 0)
-                            :for (lpower . light) :in point-lights
-                            :for ldir = (v- first-vert light)
-                            :for distance = (vlength ldir)
+                            :for (l-location l-color) :in point-lights
+                            :for l-dir = (v- first-vert l-location)
+                            :for distance = (vlength l-dir)
                             :for dsquared = (* distance distance)
-                            :for light-dir = (vunit ldir)
+                            :for light-dir = (vunit l-dir)
                             :for lambertian = (v. light-dir norm)
                             :for view-dir = (vunit (v- first-vert eye-position))
                             :for half-dir = (vunit (v- light-dir view-dir))
-                            ;;:for spec-angle = (max 0.0 (v. norm half-dir))
-                            ;;:for specular = (expt spec-angle ns)
+                            :for spec-angle = (max 0.0 (v. norm half-dir))
+                            :for specular = (expt (* 0.24 spec-angle) ns)
                             :do
                                (setf color (v+ color
-                                               ;; (v* (/ (* lpower specular) dsquared) ks)
-                                               (v* (/ (* lpower lambertian) distance) kd))))
+                                               (v* (/ specular dsquared) l-color ks)
+                                               (v* (/ lambertian distance) l-color kd))))
                           (vec4 (vx color) (vy color) (vz color) alpha)))
                        (t (obj-reader:get-attribute (material geo) "Kd"))))
 
@@ -117,33 +125,33 @@ filed-of-view is ignored if perspective is nil.
                                           (minv the-mat)
                                           (aref (obj-reader:vertices geo) i))))))
 
-             (%obj-to-svg (svg-stream)
-               (svg:with-svg (svg-stream svg-width svg-height)
-                 (loop :for geo :across tris-and-lines
-                       :for color = (shade-geometry geo)
-                       :do
-                          (xform geo)
-                          (with-slots (vertices normals material) geo
-                            (cond ((= 1 (length (obj-reader:vertices geo)))
-                                   (svg:circle svg-stream (aref vertices 0)
-                                               0.001))
-                                  ((= 2 (length (obj-reader:vertices geo)))
-                                   (svg:line svg-stream (aref vertices 0) (aref vertices 1)
-                                             :stroke-color color))
-                                  (t
-                                   (svg:polygon svg-stream vertices
-                                         :stroke-color (if show-edges
-                                                           edge-color
-                                                           color)
-                                         :fill-color color)))
+               (%obj-to-svg (svg-stream)
+                 (svg:with-svg (svg-stream svg-width svg-height)
+                   (loop :for geo :across tris-and-lines
+                         :for color = (shade-geometry geo)
+                         :do
+                            (xform geo)
+                            (with-slots (vertices normals material) geo
+                              (cond ((= 1 (length (obj-reader:vertices geo)))
+                                     (svg:circle svg-stream (aref vertices 0)
+                                                 0.001))
+                                    ((= 2 (length (obj-reader:vertices geo)))
+                                     (svg:line svg-stream (aref vertices 0) (aref vertices 1)
+                                               :stroke-color color))
+                                    (t
+                                     (svg:polygon svg-stream vertices
+                                                  :stroke-color (if show-edges
+                                                                    edge-color
+                                                                    color)
+                                                  :fill-color color)))
 
-                            (when show-centers
-                              (svg:circle svg-stream (loop :with average = (vec3 0 0 0)
-                                                           :for vert :across vertices
-                                                           :do
-                                                              (setf average (v+ vert average))
-                                                           :finally (return (v* (/ 1 3.0) average)))
-                                          0.001)))))))
+                              (when show-centers
+                                (svg:circle svg-stream (loop :with average = (vec3 0 0 0)
+                                                             :for vert :across vertices
+                                                             :do
+                                                                (setf average (v+ vert average))
+                                                             :finally (return (v* (/ 1 3.0) average)))
+                                            0.001)))))))
 
         (if (null svg-file)
             (with-output-to-string (outs)
