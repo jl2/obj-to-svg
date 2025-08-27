@@ -131,19 +131,26 @@ filed-of-view is ignored if perspective is nil.
                          :for color = (shade-geometry geo)
                          :do
                             (xform geo)
-                            (with-slots (vertices normals material) geo
-                              (cond ((= 1 (length (obj-reader:vertices geo)))
-                                     (svg:circle svg-stream (aref vertices 0)
-                                                 0.001))
-                                    ((= 2 (length (obj-reader:vertices geo)))
-                                     (svg:line svg-stream (aref vertices 0) (aref vertices 1)
-                                               :stroke-color color))
-                                    (t
-                                     (svg:polygon svg-stream vertices
-                                                  :stroke-color (if show-edges
-                                                                    edge-color
-                                                                    color)
-                                                  :fill-color color)))
+                            (with-slots (vertices normals material geo-type) geo
+                              (case geo-type
+                                (:points
+                                 (loop :for vert :across vertices
+                                       :do
+                                          (svg:circle svg-stream vert 0.001)))
+                                (:lines
+                                 (loop 
+                                       :for idx :from 1 :below (length vertices)
+                                       :do
+                                          (svg:line svg-stream
+                                                    (aref vertices (- idx 1))
+                                                    (aref vertices idx) 
+                                                    :stroke-color color)))
+                                (:face
+                                 (svg:polygon svg-stream vertices
+                                              :stroke-color (if show-edges
+                                                                edge-color
+                                                                color)
+                                              :fill-color color)))
 
                               (when show-centers
                                 (svg:circle svg-stream (loop :with average = (vec3 0 0 0)
