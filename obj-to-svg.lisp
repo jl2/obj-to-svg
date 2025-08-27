@@ -128,7 +128,7 @@ filed-of-view is ignored if perspective is nil.
                                    (svg:circle svg-stream (aref vertices 0)
                                                0.001))
                                   ((= 2 (length (obj-reader:vertices geo)))
-                                   (svg:line svg-stream (aref vertices 0) (aref vertices 2)
+                                   (svg:line svg-stream (aref vertices 0) (aref vertices 1)
                                              :stroke-color color))
                                   (t
                                    (svg:polygon svg-stream vertices
