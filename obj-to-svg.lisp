@@ -116,12 +116,15 @@ filed-of-view is ignored if perspective is nil.
                               :for view-dir = (vunit (v- first-vert eye-position))
                               :for half-dir = (vunit (v- light-dir view-dir))
                               :for spec-angle = (max 0.0 (v. norm half-dir))
-                              :for specular = (expt (* 0.24 spec-angle) ns)
+                              :for specular = (expt spec-angle ns)
                               :do
                                  (setf color (v+ color
                                                  (v* (/ specular dsquared) l-color ks)
-                                                 (v* (/ lambertian distance) l-color kd))))
-                            (vec4 (vx color) (vy color) (vz color) alpha)))
+                                                 (v* (/ lambertian dsquared) l-color kd))))
+                            (vec4 (min 1 (max  (vx color) 0.0))
+                                  (min 1 (max  (vy color) 0.0))
+                                  (min 1 (max  (vz color) 0.0))
+                                  alpha)))
                          ((and line-color (eq geo-type :line))
                           line-color)
                          (t

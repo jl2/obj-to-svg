@@ -31,8 +31,8 @@ Render Wavefront OBJ files as SVG images.
                                :eye-position (vec3 20 -26 -20)
                                :up-vector (vec3 0 1 0)
 
-                               :point-lights (list (make-instance 'obj-to-svg:point-light :color (vec3 10 10 10) :location (vec3 5 10 15))
-                                                   (make-instance 'obj-to-svg:point-light :color (vec3 20 20 20) :location (vec3 -15 10 -15)))
+                               :point-lights (list (make-instance 'obj-to-svg:point-light :color (vec3 100 100 100) :location (vec3 5 10 15))
+                                                   (make-instance 'obj-to-svg:point-light :color (vec3 280 280 100) :location (vec3 -15 10 -15)))
                                :open-file nil
                                :show-centers nil)))
   (swank:eval-in-emacs `(find-file ,(namestring (asdf:system-relative-pathname :obj-to-svg "examples/simple-knot.svg"))))
