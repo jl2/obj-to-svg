@@ -2,8 +2,7 @@
 
 ** About
 Render Wavefront OBJ files as SVG images.
-[[
-./examples/simple-knot.svg]]
+[[file:./examples/simple-knot.svg]]
 
 #+begin_src lisp
     (ql:quickload :obj-to-svg)
