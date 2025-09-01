@@ -18,9 +18,10 @@ Render Wavefront OBJ files as SVG images.
         (obj-to-svg:obj-to-svg *sknot*
                                :svg-file (asdf:system-relative-pathname :obj-to-svg "examples/simple-knot.svg")
                                :scale-factor 0.25
-                               :svg-width 1000 :svg-height 1000
+                               :svg-width 600 :svg-height 600
 
                                :show-edges t
+                               :sort-predicate #'>
                                :edge-color (vec4 0.9 0.3 0.6 0.9)
                                :shade t
 

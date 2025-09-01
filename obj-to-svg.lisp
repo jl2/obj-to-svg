@@ -54,7 +54,9 @@
                      (svg-width 1200)
 
                      (perspective t)
+                     (line-color nil)
                      (field-of-view 50.0)
+                     (sort-predicate #'<)
                      (view-transform (if perspective
                                          (mperspective field-of-view (/ svg-height svg-width 1.0) -100.0 100.0)
                                          (mortho -1.0 1.0 -1.0 1.0 -1.0 1.0)))
@@ -80,7 +82,7 @@ filed-of-view is ignored if perspective is nil.
                     (mscaling (vec3 scale-factor scale-factor scale-factor))
                     (mlookat eye-position look-at up-vector)))
           (tris-and-lines (collect-geometry obj-file)))
-      (sort-geometry tris-and-lines eye-position)
+      (sort-geometry tris-and-lines eye-position :predicate sort-predicate)
       (when tri-limit
         (setf tris-and-lines (if (> tri-limit (length tris-and-lines))
                                  tris-and-lines
@@ -88,38 +90,42 @@ filed-of-view is ignored if perspective is nil.
                                          (- (length tris-and-lines) tri-limit)))))
       (labels ((shade-geometry (geo)
                  (declare (type obj-reader:geometry geo))
-                 (cond (shade
-                        (let ((color (vec3 0 0 0))
-                              (kd (vxyz (obj-reader:get-attribute (material geo) "Kd")))
-                              (ks (vxyz (obj-reader:get-attribute (material geo) "Ks")))
-                              (ns (if-let (ns (obj-reader:get-attribute (material geo) "Ns"))
-                                    ns
-                                    1.0))
-                              (alpha (typecase (obj-reader:get-attribute (material geo) "Kd")
-                                       (vec4 (vw (obj-reader:get-attribute (material geo) "Kd")))
-                                       (t svg:*default-alpha*))))
+                 (with-slots (vertices material geo-type) geo
+                   (cond ((and shade (has-normals geo) (eq geo-type :face))
+                          (let ((color (vec3 0 0 0))
+                                (kd (vxyz (obj-reader:get-attribute material "Kd")))
+                                (ks (vxyz (obj-reader:get-attribute material "Ks")))
+                                (ns (if-let (ns (obj-reader:get-attribute material "Ns"))
+                                      ns
+                                      1.0))
+                                (alpha (typecase (obj-reader:get-attribute material "Kd")
+                                         (vec4 (vw (obj-reader:get-attribute material "Kd")))
+                                         (t svg:*default-alpha*))))
 
-                          (loop
-                            :with first-vert = (obj-reader:center-point (vertices geo))
-                            :with norm = (obj-reader:center-point (normals geo))
-                            :for light :in point-lights
-                            :for l-location = (slot-value light 'location)
-                            :for l-color = (slot-value light 'color)
-                            :for l-dir = (v- first-vert l-location)
-                            :for distance = (vlength l-dir)
-                            :for dsquared = (* distance distance)
-                            :for light-dir = (vunit l-dir)
-                            :for lambertian = (v. light-dir norm)
-                            :for view-dir = (vunit (v- first-vert eye-position))
-                            :for half-dir = (vunit (v- light-dir view-dir))
-                            :for spec-angle = (max 0.0 (v. norm half-dir))
-                            :for specular = (expt (* 0.24 spec-angle) ns)
-                            :do
-                               (setf color (v+ color
-                                               (v* (/ specular dsquared) l-color ks)
-                                               (v* (/ lambertian distance) l-color kd))))
-                          (vec4 (vx color) (vy color) (vz color) alpha)))
-                       (t (obj-reader:get-attribute (material geo) "Kd"))))
+                            (loop
+                              :with first-vert = (obj-reader:center-point (vertices geo))
+                              :with norm = (obj-reader:center-point (normals geo))
+                              :for light :in point-lights
+                              :for l-location = (slot-value light 'location)
+                              :for l-color = (slot-value light 'color)
+                              :for l-dir = (v- first-vert l-location)
+                              :for distance = (vlength l-dir)
+                              :for dsquared = (* distance distance)
+                              :for light-dir = (vunit l-dir)
+                              :for lambertian = (v. light-dir norm)
+                              :for view-dir = (vunit (v- first-vert eye-position))
+                              :for half-dir = (vunit (v- light-dir view-dir))
+                              :for spec-angle = (max 0.0 (v. norm half-dir))
+                              :for specular = (expt (* 0.24 spec-angle) ns)
+                              :do
+                                 (setf color (v+ color
+                                                 (v* (/ specular dsquared) l-color ks)
+                                                 (v* (/ lambertian distance) l-color kd))))
+                            (vec4 (vx color) (vy color) (vz color) alpha)))
+                         ((and line-color (eq geo-type :line))
+                          line-color)
+                         (t
+                          (obj-reader:get-attribute (material geo) "Kd")))))
 
                (xform (geo)
                  (declare (type obj-reader:geometry geo))
@@ -187,4 +193,8 @@ filed-of-view is ignored if perspective is nil.
                (with-output-to-file (outs svg-file)
                  (%obj-to-svg outs)))))))
     (when (and really-open open-file)
-      (uiop:launch-program (format nil "~a ~s &" open-file (namestring svg-file))))))
+      (cond ((eq :emacs open-file)
+             #+swank (swank:eval-in-emacs `(find-file ,(namestring svg-file)))
+             #-swank (error "Can't open in Emacs without Swank."))
+            (open-file
+             (uiop:launch-program (format nil "~a ~s &" open-file (namestring svg-file))))))))
