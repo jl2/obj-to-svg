@@ -173,7 +173,7 @@ filed-of-view is ignored if perspective is nil.
                                  (svg:polygon svg-stream vertices
                                               :stroke-color (if show-edges
                                                                 edge-color
-                                                                color)
+                                                                nil)
                                               :fill-color color)))
 
                               (when show-centers
