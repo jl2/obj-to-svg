@@ -22,6 +22,16 @@
               (obj-reader:read-obj ins)))
     (stream (obj-reader:read-obj thing))))
 
+(defclass point-light ()
+  ((location :initarg :location
+             :accessor location
+             :initform (vec3 0 0 10))
+
+   (color :initarg :color
+          :accessor color
+          :initform (vec3 10.0 10.0 10.0)))
+  (:documentation "A point light source.  The color is pre-multiplied by the power."))
+
 (defun obj-to-svg (obj-file
                    &key
                      (svg-file (merge-pathnames (make-pathname :type "svg")
@@ -31,14 +41,14 @@
                                                   (t #P"~/images/object.obj"))
                                                 ))
                      (tri-limit nil)
-                     (eye-position (vec3 0 0 100))
-                     (look-at (vec3 0 0 0))
-                     (up-vector (vec3 0 1 0))
+                     (eye-position (vec3 0 0 -100))
+                     (look-at (obj-reader:bb-center (obj-reader:bounding-box obj-file)))
+                     (up-vector (vec3 0 0 1))
                      (scale-factor 0.01)
                      (edge-color (vec4 1.0 0 0 0.5))
-                     (show-edges t)
+                     (show-edges nil)
                      (shade t)
-                     (point-lights (list (vec3 0 10.0 0)))
+                     (point-lights (list (make-instance 'point-light)))
                      (show-centers nil)
                      (svg-height 1200)
                      (svg-width 1200)
@@ -90,9 +100,11 @@ filed-of-view is ignored if perspective is nil.
                                        (t svg:*default-alpha*))))
 
                           (loop
-                            :with first-vert = (aref (vertices geo) 0)
-                            :with norm = (aref (vertices geo) 0)
-                            :for (l-location l-color) :in point-lights
+                            :with first-vert = (obj-reader:center-point (vertices geo))
+                            :with norm = (obj-reader:center-point (normals geo))
+                            :for light :in point-lights
+                            :for l-location = (slot-value light 'location)
+                            :for l-color = (slot-value light 'color)
                             :for l-dir = (v- first-vert l-location)
                             :for distance = (vlength l-dir)
                             :for dsquared = (* distance distance)
@@ -137,14 +149,17 @@ filed-of-view is ignored if perspective is nil.
                                  (loop :for vert :across vertices
                                        :do
                                           (svg:circle svg-stream vert 0.001)))
-                                (:lines
+                                (:line
+
                                  (loop 
-                                       :for idx :from 1 :below (length vertices)
-                                       :do
-                                          (svg:line svg-stream
-                                                    (aref vertices (- idx 1))
-                                                    (aref vertices idx) 
-                                                    :stroke-color color)))
+                                   :for idx :from 1 :below (length vertices)
+                                   
+                                   :do
+                                      (svg:line svg-stream
+                                                (aref vertices idx)
+                                                (aref vertices (- idx 1))
+                                                :stroke-color color)
+                                   ))
                                 (:face
                                  (svg:polygon svg-stream vertices
                                               :stroke-color (if show-edges

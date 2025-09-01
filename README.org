@@ -4,15 +4,41 @@
 Render Wavefront OBJ files as SVG images.
 
 #+begin_src lisp
-  (ql:quickload :obj-to-svg)
-  (handler-bind ((file-exists (lambda (c)
-                                (invoke-restart 'supersede))))
-    (obj-to-svg:obj-to-svg #p"~/data/3d-models/sphere.obj" #p"~/data/3d-models/sphere.svg"))
-  (swank:eval-in-emacs '(find-file "~/data/3d-models/sphere.svg"))
+    (ql:quickload :obj-to-svg)
+    (use-package :3d-vectors)
+    (use-package :3d-matrices)
+    
+    (defparameter *sknot* (obj-reader:read-obj-from-file (asdf:system-relative-pathname :obj-to-svg "examples/simple-knot.obj")))
+    (let ((svg:*default-alpha* 0.9)
+          (svg:*default-stroke-width* 0.0005))
+      (handler-bind ((file-exists (lambda (c)
+                                    (declare (ignorable c))
+                                    (invoke-restart 'supersede))))
+        (obj-to-svg:obj-to-svg *sknot*
+                               :svg-file (asdf:system-relative-pathname :obj-to-svg "examples/simple-knot.svg")
+                               :scale-factor 0.25
+                               :svg-width 1000 :svg-height 1000
+
+                               :show-edges t
+                               :edge-color (vec4 0.9 0.3 0.6 0.9)
+                               :shade t
+
+                               :perspective t
+                               :field-of-view 55
+
+                               :eye-position (vec3 20 -26 -20)
+                               :up-vector (vec3 0 1 0)
+
+                               :point-lights (list (make-instance 'obj-to-svg:point-light :color (vec3 10 10 10) :location (vec3 5 10 15))
+                                                   (make-instance 'obj-to-svg:point-light :color (vec3 20 20 20) :location (vec3 -15 10 -15)))
+                               :open-file nil
+                               :show-centers nil)))
+  (swank:eval-in-emacs `(find-file ,(namestring (asdf:system-relative-pathname :obj-to-svg "examples/simple-knot.svg"))))
 #+end_src
 
 #+RESULTS:
-: #<SWANK:UNREADABLE-RESULT #<buffer sphere.svg>>
+: #<SWANK:UNREADABLE-RESULT #<buffer simple-knot.svg>>
+[[examples/simple-knot.svg]]
 
 ** License
 ISC

@@ -22,4 +22,7 @@
         #:3d-matrices
         #:obj-reader)
   (:export #:main
-           #:obj-to-svg))
+           #:obj-to-svg
+           #:point-light
+           #:location
+           #:color))
