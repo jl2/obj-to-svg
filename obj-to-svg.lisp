@@ -57,6 +57,7 @@
                      (line-color nil)
                      (field-of-view 50.0)
                      (sort-predicate #'<)
+                     (bg-fill (vec4 1 1 1 1))
                      (view-transform (if perspective
                                          (mperspective field-of-view (/ svg-height svg-width 1.0) -100.0 100.0)
                                          (mortho -1.0 1.0 -1.0 1.0 -1.0 1.0)))
@@ -147,7 +148,7 @@ filed-of-view is ignored if perspective is nil.
                                           (aref (obj-reader:vertices geo) i))))))
 
                (%obj-to-svg (svg-stream)
-                 (svg:with-svg (svg-stream svg-width svg-height)
+                 (svg:with-svg (svg-stream svg-width svg-height :background-fill bg-fill)
                    (loop :for geo :across tris-and-lines
                          :for color = (shade-geometry geo)
                          :do
